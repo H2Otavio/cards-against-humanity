@@ -330,14 +330,34 @@ socket.on('playerLeft', ({ playerName }) => {
 });
 
 socket.on('error', ({ message }) => {
+  if (message.includes('Sala não encontrada')) {
+    sessionStorage.removeItem('cah-session');
+  }
   vibrate(40);
   showToast(message, 'error');
 });
 
 socket.on('gameState', (state) => {
+  if (myName && state.code) {
+    sessionStorage.setItem('cah-session', JSON.stringify({ name: myName, code: state.code }));
+  }
   const prevState = currentState;
   currentState = state;
   renderState(state, prevState);
+});
+
+socket.on('connect', () => {
+  // Reconnect if session exists
+  const savedSession = sessionStorage.getItem('cah-session');
+  if (savedSession) {
+    try {
+      const { name, code } = JSON.parse(savedSession);
+      if (name && code) {
+        myName = name;
+        socket.emit('joinRoom', { roomCode: code, playerName: name });
+      }
+    } catch(e) {}
+  }
 });
 
 // ============================================
@@ -708,6 +728,15 @@ function spawnConfetti() {
 
 // ---- Init ----
 window.addEventListener('load', () => {
+  const savedSession = sessionStorage.getItem('cah-session');
+  if (savedSession) {
+    try {
+      const { name, code } = JSON.parse(savedSession);
+      if (name) nicknameInput.value = name;
+      if (code) roomCodeInput.value = code;
+    } catch(e) {}
+  }
+
   // Don't auto-focus on mobile (prevents keyboard from popping up)
   if (window.innerWidth > 600) {
     nicknameInput.focus();

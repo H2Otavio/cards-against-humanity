@@ -177,19 +177,33 @@ io.on('connection', (socket) => {
       return;
     }
 
-    if (room.state !== 'lobby') {
+    const existingPlayer = room.players.find(p => p.name.toLowerCase() === playerName.toLowerCase());
+
+    if (room.state !== 'lobby' && !existingPlayer) {
       socket.emit('error', { message: 'O jogo já começou!' });
+      return;
+    }
+
+    if (existingPlayer) {
+      if (existingPlayer.connected) {
+        socket.emit('error', { message: 'Já existe um jogador ativo com esse nome!' });
+        return;
+      }
+      
+      // Reconnect disconnected player
+      existingPlayer.id = socket.id;
+      existingPlayer.connected = true;
+      playerId = socket.id;
+      currentRoom = code;
+      socket.join(code);
+      
+      io.to(code).emit('playerJoined', { playerName: `${playerName} (reconectou)` });
+      broadcastState(room);
       return;
     }
 
     if (room.players.length >= room.maxPlayers) {
       socket.emit('error', { message: 'Sala cheia!' });
-      return;
-    }
-
-    // Check duplicate name
-    if (room.players.some(p => p.name.toLowerCase() === playerName.toLowerCase())) {
-      socket.emit('error', { message: 'Já existe um jogador com esse nome!' });
       return;
     }
 
