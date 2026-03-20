@@ -185,6 +185,11 @@ io.on('connection', (socket) => {
     }
 
     if (existingPlayer) {
+      // Clear the disconnect timer instantly so they don't get kicked
+      if (existingPlayer.disconnectTimer) {
+        clearTimeout(existingPlayer.disconnectTimer);
+        existingPlayer.disconnectTimer = null;
+      }
       // Forcefully disconnect the old ghost socket if the server thinks they are still connected
       if (existingPlayer.connected && existingPlayer.id !== socket.id) {
         const oldSocket = io.sockets.sockets.get(existingPlayer.id);
@@ -389,47 +394,57 @@ io.on('connection', (socket) => {
     if (!room) return;
 
     const player = room.players.find(p => p.id === playerId);
-    if (player) {
+    if (!player) return;
+
+    // Give a 60-second grace period before officially disconnecting to prevent mobile stutter
+    player.disconnectTimer = setTimeout(() => {
       player.connected = false;
       io.to(currentRoom).emit('playerLeft', { playerName: player.name });
-    }
 
-    // If in lobby and player disconnects, remove them
-    if (room.state === 'lobby') {
-      room.players = room.players.filter(p => p.id !== playerId);
-      
-      // If host left, transfer or close
-      if (room.hostId === playerId) {
-        if (room.players.length > 0) {
-          room.hostId = room.players[0].id;
-        } else {
-          rooms.delete(currentRoom);
-          return;
+      // If in lobby and player disconnects, remove them
+      if (room.state === 'lobby') {
+        room.players = room.players.filter(p => p.id !== player.id);
+        
+        if (room.hostId === player.id) {
+          if (room.players.length > 0) {
+            room.hostId = room.players[0].id;
+          } else {
+            rooms.delete(currentRoom);
+            return;
+          }
         }
       }
-    }
 
-    // Clean up empty rooms
-    const activePlayers = getActivePlayers(room);
-    if (activePlayers.length === 0) {
-      rooms.delete(currentRoom);
-      return;
-    }
+      // Clean up empty rooms
+      const activePlayers = getActivePlayers(room);
+      if (activePlayers.length === 0) {
+        rooms.delete(currentRoom);
+        return;
+      }
 
-    // If during game and czar disconnects, advance and restart round
-    if (room.state === 'playing' || room.state === 'judging') {
-      const czar = getCzar(room);
-      if (czar && czar.id === playerId) {
-        advanceCzar(room);
-        if (getActivePlayers(room).length >= room.minPlayers) {
-          startRound(room);
-        } else {
-          room.state = 'lobby';
+      // If during game and czar disconnects, advance and restart round
+      if (room.state === 'playing' || room.state === 'judging') {
+        const czar = getCzar(room);
+        if (czar && czar.id === player.id) {
+          advanceCzar(room);
+          if (getActivePlayers(room).length >= room.minPlayers) {
+            startRound(room);
+          } else {
+            room.state = 'lobby';
+          }
+        } else if (room.state === 'playing') {
+          // If a regular player disconnected, check if we can advance to judging
+          const nonCzar = activePlayers.filter(p => getCzar(room) && p.id !== getCzar(room).id);
+          const allSubmitted = nonCzar.length > 0 && nonCzar.every(p => p.submittedCard !== null);
+          if (allSubmitted) {
+            room.state = 'judging';
+            room.submissions = shuffleArray(room.submissions);
+          }
         }
       }
-    }
 
-    broadcastState(room);
+      broadcastState(room);
+    }, 60000); // 60 seconds
   });
 
   function broadcastState(room) {
