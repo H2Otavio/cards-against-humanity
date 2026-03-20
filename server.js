@@ -185,12 +185,15 @@ io.on('connection', (socket) => {
     }
 
     if (existingPlayer) {
-      if (existingPlayer.connected) {
-        socket.emit('error', { message: 'Já existe um jogador ativo com esse nome!' });
-        return;
+      // Forcefully disconnect the old ghost socket if the server thinks they are still connected
+      if (existingPlayer.connected && existingPlayer.id !== socket.id) {
+        const oldSocket = io.sockets.sockets.get(existingPlayer.id);
+        if (oldSocket) {
+          oldSocket.disconnect(true);
+        }
       }
       
-      // Reconnect disconnected player
+      // Update session with new socket
       existingPlayer.id = socket.id;
       existingPlayer.connected = true;
       playerId = socket.id;

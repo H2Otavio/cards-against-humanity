@@ -741,4 +741,11 @@ window.addEventListener('load', () => {
   if (window.innerWidth > 600) {
     nicknameInput.focus();
   }
+
+  // Force socket reconnection when mobile browser tab becomes visible again
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && !socket.connected) {
+      socket.connect();
+    }
+  });
 });
