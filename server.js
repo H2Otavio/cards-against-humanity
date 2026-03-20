@@ -444,7 +444,7 @@ io.on('connection', (socket) => {
       }
 
       broadcastState(room);
-    }, 60000); // 60 seconds
+    }, 300000); // 5 minutes (300.000 ms)
   });
 
   function broadcastState(room) {

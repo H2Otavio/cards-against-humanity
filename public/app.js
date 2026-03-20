@@ -331,7 +331,7 @@ socket.on('playerLeft', ({ playerName }) => {
 
 socket.on('error', ({ message }) => {
   if (message.includes('Sala não encontrada')) {
-    sessionStorage.removeItem('cah-session');
+    localStorage.removeItem('cah-session');
   }
   vibrate(40);
   showToast(message, 'error');
@@ -339,7 +339,7 @@ socket.on('error', ({ message }) => {
 
 socket.on('gameState', (state) => {
   if (myName && state.code) {
-    sessionStorage.setItem('cah-session', JSON.stringify({ name: myName, code: state.code }));
+    localStorage.setItem('cah-session', JSON.stringify({ name: myName, code: state.code }));
   }
   const prevState = currentState;
   currentState = state;
@@ -348,7 +348,7 @@ socket.on('gameState', (state) => {
 
 socket.on('connect', () => {
   // Reconnect if session exists
-  const savedSession = sessionStorage.getItem('cah-session');
+  const savedSession = localStorage.getItem('cah-session');
   if (savedSession) {
     try {
       const { name, code } = JSON.parse(savedSession);
@@ -728,7 +728,7 @@ function spawnConfetti() {
 
 // ---- Init ----
 window.addEventListener('load', () => {
-  const savedSession = sessionStorage.getItem('cah-session');
+  const savedSession = localStorage.getItem('cah-session');
   if (savedSession) {
     try {
       const { name, code } = JSON.parse(savedSession);
