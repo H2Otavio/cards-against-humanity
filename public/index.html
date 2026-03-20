@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="description" content="Cards Against Humanity Online - Jogue com seus amigos o jogo de cartas mais polêmico do mundo!">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0a0a0f">
+  <title>Cards Against Humanity Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- ============================================ -->
+  <!-- PARTICLE BACKGROUND -->
+  <!-- ============================================ -->
+  <canvas id="particles-canvas"></canvas>
+
+  <!-- ============================================ -->
+  <!-- SCREEN: HOME -->
+  <!-- ============================================ -->
+  <div id="screen-home" class="screen active">
+    <div class="home-container">
+      <div class="logo-area">
+        <div class="logo-card black-card-logo">
+          <span class="logo-text">Cards<br>Against<br>Humanity</span>
+          <span class="logo-subtitle">ONLINE</span>
+        </div>
+      </div>
+      <div class="home-form">
+        <div class="input-group">
+          <label for="nickname-input">Seu apelido</label>
+          <input type="text" id="nickname-input" placeholder="Digite seu apelido..." maxlength="20" autocomplete="off">
+        </div>
+        <div class="home-buttons">
+          <button id="btn-create-room" class="btn btn-primary btn-large">
+            <span class="btn-icon">🎲</span>
+            Criar Sala
+          </button>
+          <div class="divider"><span>ou</span></div>
+          <div class="input-group">
+            <label for="room-code-input">Código da sala</label>
+            <input type="text" id="room-code-input" placeholder="Ex: ABC123" maxlength="6" autocomplete="off" style="text-transform: uppercase;">
+          </div>
+          <button id="btn-join-room" class="btn btn-secondary btn-large">
+            <span class="btn-icon">🚪</span>
+            Entrar na Sala
+          </button>
+        </div>
+      </div>
+      <div class="home-how-to-play">
+        <h3>Como jogar:</h3>
+        <ol>
+          <li>Digite seu apelido e crie ou entre em uma sala.</li>
+          <li>Compartilhe o código da sala com seus amigos.</li>
+          <li>A cada rodada, uma carta preta aparece com um espaço em branco.</li>
+          <li>Preencha com a carta branca mais engraçada da sua mão!</li>
+          <li>O Juiz escolhe a melhor resposta. Quem ganhar leva o ponto! 🏆</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- SCREEN: LOBBY -->
+  <!-- ============================================ -->
+  <div id="screen-lobby" class="screen">
+    <div class="lobby-container">
+      <div class="lobby-header">
+        <h1>Sala de Espera</h1>
+        <div class="room-code-display">
+          <span class="room-code-label">Código da Sala:</span>
+          <span id="lobby-room-code" class="room-code-value"></span>
+          <button id="btn-copy-code" class="btn btn-small btn-ghost" title="Copiar código">📋</button>
+        </div>
+      </div>
+      
+      <div class="lobby-players">
+        <h2>Jogadores <span id="player-count"></span></h2>
+        <ul id="player-list" class="player-list"></ul>
+        <p class="lobby-hint" id="lobby-hint"></p>
+      </div>
+
+      <div class="lobby-actions">
+        <button id="btn-start-game" class="btn btn-primary btn-large" style="display:none;">
+          <span class="btn-icon">🎮</span>
+          Iniciar Jogo
+        </button>
+        <p id="lobby-waiting-msg" class="lobby-waiting">Aguardando o host iniciar o jogo...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- SCREEN: GAME -->
+  <!-- ============================================ -->
+  <div id="screen-game" class="screen">
+    <div class="game-container">
+      <!-- Top bar -->
+      <div class="game-topbar">
+        <div class="game-info">
+          <span class="game-round" id="game-round">Rodada 1</span>
+          <span class="game-goal" id="game-goal">Meta: 7 pts</span>
+        </div>
+        <button id="btn-scoreboard-toggle" class="btn btn-ghost btn-small">🏆 Placar</button>
+      </div>
+
+      <!-- Scoreboard (collapsible) -->
+      <div id="scoreboard-panel" class="scoreboard-panel hidden">
+        <div class="scoreboard-header">
+          <h3>Placar</h3>
+          <button id="btn-close-scoreboard" class="btn btn-ghost btn-small">✕</button>
+        </div>
+        <ul id="scoreboard-list" class="scoreboard-list"></ul>
+      </div>
+
+      <!-- Scrollable Game Content -->
+      <div class="game-content" id="game-content">
+        <!-- Black Card -->
+        <div class="black-card-area">
+          <div class="black-card" id="black-card">
+            <p id="black-card-text"></p>
+            <span class="card-label">Cards Against Humanity</span>
+          </div>
+          <div class="czar-badge" id="czar-badge"></div>
+        </div>
+
+        <!-- Game Status -->
+        <div class="game-status" id="game-status"></div>
+
+        <!-- Submissions Area (for judging) -->
+        <div id="submissions-area" class="submissions-area hidden">
+          <div id="submissions-grid" class="submissions-grid"></div>
+        </div>
+      </div>
+
+      <!-- Round End Overlay -->
+      <div id="round-end-overlay" class="overlay hidden">
+        <div class="overlay-content round-end-content">
+          <div class="winner-announcement">
+            <span class="winner-emoji">🏆</span>
+            <h2 id="winner-name"></h2>
+            <p>ganhou a rodada!</p>
+          </div>
+          <div class="winning-combo">
+            <div class="mini-black-card" id="mini-black-card"></div>
+            <div class="mini-white-card" id="mini-white-card"></div>
+          </div>
+          <button id="btn-next-round" class="btn btn-primary" style="display:none;">Próxima Rodada →</button>
+        </div>
+      </div>
+
+      <!-- Game Over Overlay -->
+      <div id="game-over-overlay" class="overlay hidden">
+        <div class="overlay-content game-over-content">
+          <div class="confetti-container" id="confetti-container"></div>
+          <span class="game-over-emoji">👑</span>
+          <h1 id="game-over-winner"></h1>
+          <p class="game-over-subtitle">venceu o jogo!</p>
+          <div id="final-scoreboard" class="final-scoreboard"></div>
+          <div class="game-over-actions">
+            <button id="btn-play-again" class="btn btn-primary" style="display:none;">🔄 Jogar Novamente</button>
+            <button id="btn-back-lobby" class="btn btn-secondary" style="display:none;">🏠 Voltar ao Lobby</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Player's Hand -->
+      <div class="hand-area" id="hand-area">
+        <div class="hand-label">Suas Cartas <span class="hand-scroll-hint" id="hand-scroll-hint">← deslize →</span></div>
+        <div class="hand-cards" id="hand-cards"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- TOAST CONTAINER -->
+  <!-- ============================================ -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- ============================================ -->
+  <!-- SCRIPTS -->
+  <!-- ============================================ -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
