@@ -370,9 +370,9 @@ socket.on('gameState', (state) => {
 });
 
 socket.on('luckyResult', ({ blackCard, whiteCard }) => {
-  let blackText = blackCard.text;
+  let blackText = blackCard;
   if (blackText.includes('_')) {
-    blackText = blackText.replace(/_/, `<span class="blank"></span>`);
+    blackText = blackText.replace(/_+/g, `<span class="blank"></span>`);
   }
   luckyBlackText.innerHTML = blackText;
   luckyWhiteText.textContent = whiteCard;
