@@ -447,6 +447,13 @@ io.on('connection', (socket) => {
     }, 300000); // 5 minutes (300.000 ms)
   });
 
+  socket.on('luckyDraw', () => {
+    if (!blackCards || !whiteCards || blackCards.length === 0 || whiteCards.length === 0) return;
+    const randomBlack = blackCards[Math.floor(Math.random() * blackCards.length)];
+    const randomWhite = whiteCards[Math.floor(Math.random() * whiteCards.length)];
+    socket.emit('luckyResult', { blackCard: randomBlack, whiteCard: randomWhite });
+  });
+
   function broadcastState(room) {
     for (const player of room.players) {
       if (player.connected) {

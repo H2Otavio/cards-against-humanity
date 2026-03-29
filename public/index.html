@@ -49,6 +49,10 @@
             <span class="btn-icon">🚪</span>
             Entrar na Sala
           </button>
+
+          <button id="btn-feeling-lucky" class="btn btn-ghost btn-small" style="margin-top: 1.5rem; color: var(--text-muted); padding: 0.5rem">
+            ✨ Estou com sorte
+          </button>
         </div>
       </div>
       <div class="home-how-to-play">
@@ -137,7 +141,7 @@
         </div>
       </div>
 
-      <!-- Round End Overlay -->
+
       <div id="round-end-overlay" class="overlay hidden">
         <div class="overlay-content round-end-content">
           <div class="winner-announcement">
@@ -172,6 +176,29 @@
       <div class="hand-area" id="hand-area">
         <div class="hand-label">Suas Cartas <span class="hand-scroll-hint" id="hand-scroll-hint">← deslize →</span></div>
         <div class="hand-cards" id="hand-cards"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- SCREEN: FEELING LUCKY MODAL -->
+  <!-- ============================================ -->
+  <div id="lucky-modal" class="overlay hidden">
+    <div class="modal" style="max-width: 600px;">
+      <h2 style="margin-bottom: 2rem; color: #f59e0b;">✨ Uma combinação aleatória</h2>
+      <div class="lucky-cards-container" style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
+        <div class="black-card" style="transform: scale(0.9); flex: 0 0 200px; margin: 0;">
+          <p id="lucky-black-text"></p>
+          <span class="card-label">Cards Against Humanity</span>
+        </div>
+        <div class="hand-card" style="transform: scale(0.9); flex: 0 0 200px; min-height: 250px; margin: 0; background-color: white; border: 1px solid #ccc; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+          <p id="lucky-white-text" style="color: black; font-weight: 600; font-size: 1.1rem; text-align: left;"></p>
+          <span class="card-label" style="color: black; opacity: 0.5;">Cards Against Humanity</span>
+        </div>
+      </div>
+      <div style="margin-top: 2rem; display: flex; flex-direction: column; gap: 0.5rem;">
+        <button id="btn-lucky-again" class="btn btn-secondary">🎲 Sortear de novo</button>
+        <button id="btn-lucky-close" class="btn btn-ghost" style="color: var(--text-muted)">Fechar</button>
       </div>
     </div>
   </div>

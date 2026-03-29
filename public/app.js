@@ -59,6 +59,14 @@ const btnBackLobby = document.getElementById('btn-back-lobby');
 // Toast
 const toastContainer = document.getElementById('toast-container');
 
+// Lucky Easter Egg
+const btnFeelingLucky = document.getElementById('btn-feeling-lucky');
+const luckyModal = document.getElementById('lucky-modal');
+const luckyBlackText = document.getElementById('lucky-black-text');
+const luckyWhiteText = document.getElementById('lucky-white-text');
+const btnLuckyAgain = document.getElementById('btn-lucky-again');
+const btnLuckyClose = document.getElementById('btn-lucky-close');
+
 // ---- State ----
 let currentState = null;
 let selectedCardIndex = null;
@@ -231,6 +239,21 @@ btnJoinRoom.addEventListener('click', () => {
   socket.emit('joinRoom', { roomCode: code, playerName: name });
 });
 
+btnFeelingLucky.addEventListener('click', () => {
+  vibrate(10);
+  socket.emit('luckyDraw');
+});
+
+btnLuckyAgain.addEventListener('click', () => {
+  vibrate(10);
+  socket.emit('luckyDraw');
+});
+
+btnLuckyClose.addEventListener('click', () => {
+  vibrate(10);
+  luckyModal.classList.add('hidden');
+});
+
 // Enter key on inputs
 nicknameInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
@@ -344,6 +367,16 @@ socket.on('gameState', (state) => {
   const prevState = currentState;
   currentState = state;
   renderState(state, prevState);
+});
+
+socket.on('luckyResult', ({ blackCard, whiteCard }) => {
+  let blackText = blackCard.text;
+  if (blackText.includes('_')) {
+    blackText = blackText.replace(/_/, `<span class="blank"></span>`);
+  }
+  luckyBlackText.innerHTML = blackText;
+  luckyWhiteText.textContent = whiteCard;
+  luckyModal.classList.remove('hidden');
 });
 
 socket.on('connect', () => {
