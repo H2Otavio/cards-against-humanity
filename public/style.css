@@ -1330,6 +1330,16 @@ body {
 }
 
 /* ============================================
+   CARD BLANKS
+   ============================================ */
+.blank {
+  display: inline-block;
+  min-width: 50px;
+  border-bottom: 2px solid currentColor;
+  margin: 0 4px;
+}
+
+/* ============================================
    LANDSCAPE MOBILE
    ============================================ */
 @media (max-height: 500px) and (orientation: landscape) {
