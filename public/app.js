@@ -26,11 +26,13 @@ const playerCount = document.getElementById('player-count');
 const btnStartGame = document.getElementById('btn-start-game');
 const lobbyWaitingMsg = document.getElementById('lobby-waiting-msg');
 const lobbyHint = document.getElementById('lobby-hint');
+const btnLeaveRoomLobby = document.getElementById('btn-leave-room-lobby');
 
 // Game
 const gameRound = document.getElementById('game-round');
 const gameGoal = document.getElementById('game-goal');
 const btnScoreboardToggle = document.getElementById('btn-scoreboard-toggle');
+const btnLeaveRoomGame = document.getElementById('btn-leave-room-game');
 const scoreboardPanel = document.getElementById('scoreboard-panel');
 const btnCloseScoreboard = document.getElementById('btn-close-scoreboard');
 const scoreboardList = document.getElementById('scoreboard-list');
@@ -252,6 +254,31 @@ btnLuckyAgain.addEventListener('click', () => {
 btnLuckyClose.addEventListener('click', () => {
   vibrate(10);
   luckyModal.classList.add('hidden');
+});
+
+// Leave Room Logic
+function leaveRoom() {
+  localStorage.removeItem('cah-session');
+  socket.emit('leaveRoom');
+  
+  // Reset local state UI
+  currentState = null;
+  myName = '';
+  playerList.innerHTML = '';
+  scoreboardList.innerHTML = '';
+  gameStatus.innerHTML = '';
+  handCards.innerHTML = '';
+  submissionsGrid.innerHTML = '';
+  
+  showScreen('home');
+  vibrate(15);
+}
+
+btnLeaveRoomLobby.addEventListener('click', leaveRoom);
+btnLeaveRoomGame.addEventListener('click', () => {
+  if (confirm('Tem certeza que deseja sair da partida atual?')) {
+    leaveRoom();
+  }
 });
 
 // Enter key on inputs

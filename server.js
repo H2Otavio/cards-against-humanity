@@ -447,6 +447,72 @@ io.on('connection', (socket) => {
     }, 300000); // 5 minutes (300.000 ms)
   });
 
+  socket.on('leaveRoom', () => {
+    if (!currentRoom) return;
+    const room = rooms.get(currentRoom);
+    if (!room) return;
+
+    const playerIndex = room.players.findIndex(p => p.id === playerId);
+    if (playerIndex === -1) return;
+    const player = room.players[playerIndex];
+
+    if (player.disconnectTimer) {
+      clearTimeout(player.disconnectTimer);
+    }
+    
+    // Instantly remove player completely
+    room.players.splice(playerIndex, 1);
+    io.to(currentRoom).emit('playerLeft', { playerName: player.name });
+    
+    // Re-assign host
+    if (room.hostId === player.id) {
+      if (room.players.length > 0) {
+        room.hostId = room.players[0].id;
+      } else {
+        rooms.delete(currentRoom);
+        socket.leave(currentRoom);
+        currentRoom = null;
+        return;
+      }
+    }
+
+    // Clean up empty rooms
+    const activePlayers = getActivePlayers(room);
+    if (activePlayers.length === 0) {
+      rooms.delete(currentRoom);
+      socket.leave(currentRoom);
+      currentRoom = null;
+      return;
+    }
+
+    // If czar left, advance game state
+    if (room.state === 'playing' || room.state === 'judging') {
+      const czar = getCzar(room);
+      if (czar && czar.id === player.id) {
+        advanceCzar(room);
+        if (getActivePlayers(room).length >= room.minPlayers) {
+          startRound(room);
+        } else {
+          room.state = 'lobby';
+        }
+      } else if (room.state === 'playing') {
+        const nonCzar = activePlayers.filter(p => getCzar(room) && p.id !== getCzar(room).id);
+        const allSubmitted = nonCzar.length > 0 && nonCzar.every(p => p.submittedCard !== null);
+        if (allSubmitted) {
+          room.state = 'judging';
+          room.submissions = shuffleArray(room.submissions);
+        }
+      }
+    }
+
+    // Remove player submission if they had one
+    room.submissions = room.submissions.filter(s => s.player !== player.name);
+
+    broadcastState(room);
+    socket.leave(currentRoom);
+    currentRoom = null;
+  });
+
   socket.on('luckyDraw', () => {
     if (!blackCards || !whiteCards || blackCards.length === 0 || whiteCards.length === 0) return;
     const randomBlack = blackCards[Math.floor(Math.random() * blackCards.length)];

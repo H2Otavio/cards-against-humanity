@@ -88,12 +88,15 @@
         <p class="lobby-hint" id="lobby-hint"></p>
       </div>
 
-      <div class="lobby-actions">
-        <button id="btn-start-game" class="btn btn-primary btn-large" style="display:none;">
+      <div class="lobby-actions" style="display: flex; flex-direction: column; gap: 1rem; align-items: center;">
+        <button id="btn-start-game" class="btn btn-primary btn-large" style="display:none; width: 100%;">
           <span class="btn-icon">🎮</span>
           Iniciar Jogo
         </button>
         <p id="lobby-waiting-msg" class="lobby-waiting">Aguardando o host iniciar o jogo...</p>
+        <button id="btn-leave-room-lobby" class="btn btn-ghost" style="color: var(--text-muted); padding: 0.5rem;">
+          Sair da Sala
+        </button>
       </div>
     </div>
   </div>
@@ -109,7 +112,10 @@
           <span class="game-round" id="game-round">Rodada 1</span>
           <span class="game-goal" id="game-goal">Meta: 7 pts</span>
         </div>
-        <button id="btn-scoreboard-toggle" class="btn btn-ghost btn-small">🏆 Placar</button>
+        <div style="display: flex; gap: 0.5rem;">
+          <button id="btn-scoreboard-toggle" class="btn btn-ghost btn-small">🏆 Placar</button>
+          <button id="btn-leave-room-game" class="btn btn-ghost btn-small" style="color: var(--accent-red);" title="Sair da Sala">⏏</button>
+        </div>
       </div>
 
       <!-- Scoreboard (collapsible) -->
