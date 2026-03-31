@@ -492,10 +492,13 @@ function renderGame(state, prevState) {
 
   // Black card
   if (state.currentBlackCard) {
-    const formattedText = state.currentBlackCard.replace(
-      /_____/g,
-      '<span style="border-bottom: 3px solid #7c3aed; padding: 0 16px;">&nbsp;&nbsp;&nbsp;&nbsp;</span>'
-    );
+    let formattedText = state.currentBlackCard.text;
+    if (formattedText.includes('_')) {
+      formattedText = formattedText.replace(
+        /_+/g,
+        '<span class="blank"></span>'
+      );
+    }
     blackCardText.innerHTML = formattedText;
   }
 
@@ -567,8 +570,13 @@ function renderRoundEnd(state) {
 
   if (state.roundWinner) {
     winnerName.textContent = state.roundWinner.playerName;
-    miniBlackCard.textContent = state.currentBlackCard;
-    miniWhiteCard.textContent = state.roundWinner.card;
+    miniBlackCard.textContent = state.currentBlackCard.text;
+    
+    // Support multiple winning cards
+    miniWhiteCard.innerHTML = state.roundWinner.cards
+      .map(cardStr => `<div style="background:var(--white-card-bg); color:var(--white-card-text); padding:10px; border-radius:6px; margin-bottom: 8px; font-weight: 600;">${cardStr}</div>`)
+      .join('');
+      
     vibrate([20, 60, 20]); // Pattern vibration
   }
 
@@ -607,9 +615,12 @@ function renderGameOver(state) {
   gameStatus.innerHTML = '';
 }
 
+let selectedCards = []; // We will store indices here instead of selectedCardIndex
+
 // ---- Render Hand ----
 function renderHand(state) {
   handCards.innerHTML = '';
+  selectedCards = [];
   
   // Remove any existing submit container
   const existingSubmitContainer = handArea.querySelector('.submit-btn-container');
@@ -620,10 +631,13 @@ function renderHand(state) {
     handScrollHint.classList.remove('hidden');
   }
 
+  const expectedPicks = state.currentBlackCard.pick || 1;
+
   state.hand.forEach((card, index) => {
     const cardEl = document.createElement('div');
     cardEl.className = 'hand-card';
-    
+    cardEl.dataset.index = index;
+
     const textSpan = document.createElement('span');
     textSpan.textContent = card;
     cardEl.appendChild(textSpan);
@@ -637,48 +651,74 @@ function renderHand(state) {
       e.stopPropagation();
       vibrate(10);
       
-      if (selectedCardIndex === index) {
+      const pos = selectedCards.indexOf(index);
+      if (pos > -1) {
         // Deselect
-        selectedCardIndex = null;
-        document.querySelectorAll('.hand-card').forEach(c => c.classList.remove('selected'));
-        const submitC = handArea.querySelector('.submit-btn-container');
-        if (submitC) submitC.classList.remove('visible');
+        selectedCards.splice(pos, 1);
       } else {
         // Select
-        selectedCardIndex = index;
-        document.querySelectorAll('.hand-card').forEach(c => c.classList.remove('selected'));
-        cardEl.classList.add('selected');
-        
-        // Scroll the selected card into center view
-        cardEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-        
-        let submitContainer = handArea.querySelector('.submit-btn-container');
-        if (!submitContainer) {
-          submitContainer = document.createElement('div');
-          submitContainer.className = 'submit-btn-container';
-          const submitBtn = document.createElement('button');
-          submitBtn.className = 'btn-submit-card';
-          submitBtn.textContent = 'Enviar Carta ✉️';
-          submitBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (selectedCardIndex !== null) {
-              vibrate(20);
-              socket.emit('submitCard', { cardIndex: selectedCardIndex });
-              selectedCardIndex = null;
-              submitContainer.classList.remove('visible');
-            }
-          });
-          submitContainer.appendChild(submitBtn);
-          handArea.insertBefore(submitContainer, handCards);
+        if (selectedCards.length < expectedPicks) {
+          selectedCards.push(index);
+        } else {
+          // If already full, replace the last picked card
+          selectedCards[selectedCards.length - 1] = index;
         }
+      }
+
+      // Update UI
+      document.querySelectorAll('.hand-card').forEach(c => {
+        c.classList.remove('selected');
+        const orderBadge = c.querySelector('.selection-order');
+        if (orderBadge) orderBadge.remove();
+      });
+
+      selectedCards.forEach((idx, i) => {
+        const c = handCards.querySelector(`.hand-card[data-index="${idx}"]`);
+        if (c) {
+          c.classList.add('selected');
+          if (expectedPicks > 1) {
+            const badge = document.createElement('div');
+            badge.className = 'selection-order';
+            badge.textContent = i + 1;
+            c.appendChild(badge);
+          }
+        }
+      });
+      
+      let submitContainer = handArea.querySelector('.submit-btn-container');
+      if (!submitContainer) {
+        submitContainer = document.createElement('div');
+        submitContainer.className = 'submit-btn-container';
+        const submitBtn = document.createElement('button');
+        submitBtn.className = 'btn-submit-card';
+        submitBtn.textContent = expectedPicks > 1 ? `Enviar ${expectedPicks} Cartas ✉️` : 'Enviar Carta ✉️';
+        submitBtn.addEventListener('click', (btnEvent) => {
+          btnEvent.stopPropagation();
+          if (selectedCards.length === expectedPicks) {
+            vibrate(20);
+            socket.emit('submitCard', { cardIndices: selectedCards });
+            selectedCards = [];
+            submitContainer.classList.remove('visible');
+          }
+        });
+        submitContainer.appendChild(submitBtn);
+        handArea.insertBefore(submitContainer, handCards);
+      }
+      
+      // Only show submit button if exactly expectedPicks are selected
+      if (selectedCards.length === expectedPicks) {
         submitContainer.classList.add('visible');
+        if (selectedCards.length > 0) {
+           const lastSelected = handCards.querySelector(`.hand-card[data-index="${selectedCards[selectedCards.length-1]}"]`);
+           if(lastSelected) lastSelected.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
+      } else {
+        submitContainer.classList.remove('visible');
       }
     });
 
     handCards.appendChild(cardEl);
   });
-
-  selectedCardIndex = null;
 
   // Track scroll to hide hint
   handCards.addEventListener('scroll', () => {
@@ -694,27 +734,35 @@ function renderSubmissions(state) {
   submissionsGrid.innerHTML = '';
 
   state.submissions.forEach((sub, index) => {
-    const card = document.createElement('div');
+    const cluster = document.createElement('div');
+    cluster.className = 'submission-cluster';
+    cluster.style.animationDelay = `${index * 0.12}s`;
 
     if (sub.hidden) {
+      const card = document.createElement('div');
       card.className = 'submission-card hidden-card';
       card.textContent = '?';
+      cluster.appendChild(card);
     } else {
-      card.className = 'submission-card';
-      card.textContent = sub.card;
-      card.style.animationDelay = `${index * 0.12}s`;
-
-      const footer = document.createElement('span');
-      footer.className = 'card-footer';
-      footer.textContent = 'Cards Against Humanity';
-      card.appendChild(footer);
+      sub.cards.forEach(cardText => {
+        const card = document.createElement('div');
+        card.className = 'submission-card';
+        card.textContent = cardText;
+        
+        const footer = document.createElement('span');
+        footer.className = 'card-footer';
+        footer.textContent = 'Cards Against Humanity';
+        card.appendChild(footer);
+        
+        cluster.appendChild(card);
+      });
 
       if (state.isCzar) {
-        card.classList.add('selectable');
-        card.addEventListener('click', () => {
+        cluster.classList.add('selectable');
+        cluster.addEventListener('click', () => {
           vibrate(20);
-          document.querySelectorAll('.submission-card').forEach(c => c.classList.remove('selected'));
-          card.classList.add('selected');
+          document.querySelectorAll('.submission-cluster').forEach(c => c.classList.remove('selected'));
+          cluster.classList.add('selected');
           
           // Confirm selection after a brief moment
           setTimeout(() => {
@@ -724,7 +772,7 @@ function renderSubmissions(state) {
       }
     }
 
-    submissionsGrid.appendChild(card);
+    submissionsGrid.appendChild(cluster);
   });
 }
 

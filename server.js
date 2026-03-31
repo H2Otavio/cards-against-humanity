@@ -36,7 +36,7 @@ function createRoom(hostId, hostName) {
       name: hostName,
       score: 0,
       hand: [],
-      submittedCard: null,
+      submittedCards: [],
       connected: true
     }],
     state: 'lobby', // lobby, playing, judging, roundEnd, gameOver
@@ -79,17 +79,19 @@ function startRound(room) {
 
   // Reset submitted cards
   for (const player of room.players) {
-    player.submittedCard = null;
+    player.submittedCards = [];
   }
 
   // Draw black card
   if (room.blackDeck.length === 0) {
     room.blackDeck = shuffleArray(blackCards);
   }
-  room.currentBlackCard = room.blackDeck.pop();
+  const text = room.blackDeck.pop();
+  const pickCount = Math.max(1, (text.match(/_+/g) || []).length);
+  room.currentBlackCard = { text: text, pick: pickCount };
 
-  // Deal up to 7 cards
-  dealCards(room, 7);
+  // Deal up to 10 cards per player (to support multiple submissions comfortably)
+  dealCards(room, 10);
 }
 
 function getActivePlayers(room) {
@@ -134,7 +136,7 @@ function getRoomState(room, playerId) {
       name: p.name,
       score: p.score,
       connected: p.connected,
-      hasSubmitted: p.submittedCard !== null,
+      hasSubmitted: p.submittedCards.length > 0,
       isCzar: getCzar(room) && getCzar(room).id === p.id
     })),
     hand: player ? player.hand : [],
@@ -221,7 +223,7 @@ io.on('connection', (socket) => {
       name: playerName,
       score: 0,
       hand: [],
-      submittedCard: null,
+      submittedCards: [],
       connected: true
     });
 
@@ -255,7 +257,7 @@ io.on('connection', (socket) => {
     broadcastState(room);
   });
 
-  socket.on('submitCard', ({ cardIndex }) => {
+  socket.on('submitCard', ({ cardIndices }) => {
     if (!currentRoom) return;
     const room = rooms.get(currentRoom);
     if (!room || room.state !== 'playing') return;
@@ -269,19 +271,42 @@ io.on('connection', (socket) => {
       return;
     }
 
-    if (player.submittedCard !== null) {
-      socket.emit('error', { message: 'Você já submeteu uma carta!' });
+    if (player.submittedCards.length > 0) {
+      socket.emit('error', { message: 'Você já submeteu suas cartas!' });
       return;
     }
 
-    if (cardIndex < 0 || cardIndex >= player.hand.length) return;
+    const expectedPicks = room.currentBlackCard.pick || 1;
+    if (!Array.isArray(cardIndices) || cardIndices.length !== expectedPicks) {
+      socket.emit('error', { message: `Esta carta exige ${expectedPicks} resposta(s).` });
+      return;
+    }
 
-    const card = player.hand.splice(cardIndex, 1)[0];
-    player.submittedCard = card;
+    // Ensure unique and valid indices
+    const uniqueIndices = [...new Set(cardIndices)];
+    if (uniqueIndices.length !== expectedPicks) {
+      socket.emit('error', { message: 'Você enviou índices repetidos!' });
+      return;
+    }
+
+    for (const idx of uniqueIndices) {
+      if (idx < 0 || idx >= player.hand.length) return;
+    }
+
+    // Capture cards in exact selection order
+    const selectedCards = cardIndices.map(idx => player.hand[idx]);
+
+    // Remove from hand (sort descending to not mess up earlier indices)
+    const sortedIndices = [...cardIndices].sort((a, b) => b - a);
+    for (const idx of sortedIndices) {
+      player.hand.splice(idx, 1);
+    }
+
+    player.submittedCards = selectedCards;
     room.submissions.push({
       playerId: player.id,
       playerName: player.name,
-      card: card
+      cards: selectedCards
     });
 
     broadcastState(room);
@@ -291,7 +316,7 @@ io.on('connection', (socket) => {
     const nonCzar = activePlayers.filter(p => {
       return getCzar(room) && p.id !== getCzar(room).id;
     });
-    const allSubmitted = nonCzar.every(p => p.submittedCard !== null);
+    const allSubmitted = nonCzar.every(p => p.submittedCards.length > 0);
 
     if (allSubmitted) {
       room.state = 'judging';
@@ -322,7 +347,7 @@ io.on('connection', (socket) => {
 
     room.roundWinner = {
       playerName: winner.playerName,
-      card: winner.card,
+      cards: winner.cards,
       selectedIndex: submissionIndex
     };
     room.state = 'roundEnd';
@@ -357,7 +382,7 @@ io.on('connection', (socket) => {
     for (const player of room.players) {
       player.score = 0;
       player.hand = [];
-      player.submittedCard = null;
+      player.submittedCards = [];
     }
     room.roundNumber = 0;
     room.czarIndex = 0;
@@ -377,7 +402,7 @@ io.on('connection', (socket) => {
     for (const player of room.players) {
       player.score = 0;
       player.hand = [];
-      player.submittedCard = null;
+      player.submittedCards = [];
     }
     room.state = 'lobby';
     room.roundNumber = 0;
@@ -435,7 +460,7 @@ io.on('connection', (socket) => {
         } else if (room.state === 'playing') {
           // If a regular player disconnected, check if we can advance to judging
           const nonCzar = activePlayers.filter(p => getCzar(room) && p.id !== getCzar(room).id);
-          const allSubmitted = nonCzar.length > 0 && nonCzar.every(p => p.submittedCard !== null);
+          const allSubmitted = nonCzar.length > 0 && nonCzar.every(p => p.submittedCards.length > 0);
           if (allSubmitted) {
             room.state = 'judging';
             room.submissions = shuffleArray(room.submissions);
@@ -497,7 +522,7 @@ io.on('connection', (socket) => {
         }
       } else if (room.state === 'playing') {
         const nonCzar = activePlayers.filter(p => getCzar(room) && p.id !== getCzar(room).id);
-        const allSubmitted = nonCzar.length > 0 && nonCzar.every(p => p.submittedCard !== null);
+        const allSubmitted = nonCzar.length > 0 && nonCzar.every(p => p.submittedCards.length > 0);
         if (allSubmitted) {
           room.state = 'judging';
           room.submissions = shuffleArray(room.submissions);
@@ -515,9 +540,18 @@ io.on('connection', (socket) => {
 
   socket.on('luckyDraw', () => {
     if (!blackCards || !whiteCards || blackCards.length === 0 || whiteCards.length === 0) return;
-    const randomBlack = blackCards[Math.floor(Math.random() * blackCards.length)];
-    const randomWhite = whiteCards[Math.floor(Math.random() * whiteCards.length)];
-    socket.emit('luckyResult', { blackCard: randomBlack, whiteCard: randomWhite });
+    const randomBlackStr = blackCards[Math.floor(Math.random() * blackCards.length)];
+    const pickCount = Math.max(1, (randomBlackStr.match(/_+/g) || []).length);
+    
+    const chosenWhites = [];
+    for(let i = 0; i < pickCount; i++) {
+        chosenWhites.push(whiteCards[Math.floor(Math.random() * whiteCards.length)]);
+    }
+
+    socket.emit('luckyResult', { 
+        blackCard: { text: randomBlackStr, pick: pickCount }, 
+        whiteCards: chosenWhites 
+    });
   });
 
   function broadcastState(room) {
