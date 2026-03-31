@@ -42,6 +42,7 @@ const czarBadge = document.getElementById('czar-badge');
 const gameStatus = document.getElementById('game-status');
 const submissionsArea = document.getElementById('submissions-area');
 const submissionsGrid = document.getElementById('submissions-grid');
+const btnConfirmWinnerContainer = document.getElementById('btn-confirm-winner-container');
 const handArea = document.getElementById('hand-area');
 const handCards = document.getElementById('hand-cards');
 const handScrollHint = document.getElementById('hand-scroll-hint');
@@ -552,11 +553,17 @@ function renderJudgingState(state, prevState) {
   gameOverOverlay.classList.add('hidden');
   submissionsArea.classList.remove('hidden');
 
+  const allRevealed = state.submissions.length > 0 && state.submissions.every(sub => !sub.hidden);
+
   if (state.isCzar) {
-    gameStatus.innerHTML = '👑 <span class="highlight">Toque na melhor resposta!</span>';
+    if (!allRevealed) {
+      gameStatus.innerHTML = '👑 <span class="highlight">Vire todas as cartas para ler as respostas!</span>';
+    } else {
+      gameStatus.innerHTML = '👑 <span class="highlight">Selecione e confirme a melhor resposta!</span>';
+    }
     vibrate(25);
   } else {
-    gameStatus.innerHTML = '⏳ O Juiz está escolhendo...';
+    gameStatus.innerHTML = '⏳ O Juiz está julgando as cartas...';
   }
 
   renderSubmissions(state);
@@ -729,20 +736,36 @@ function renderHand(state) {
   }, { once: true });
 }
 
+let selectedWinnerIndex = null;
+
 // ---- Render Submissions ----
 function renderSubmissions(state) {
   submissionsGrid.innerHTML = '';
+  
+  if (btnConfirmWinnerContainer) {
+    btnConfirmWinnerContainer.style.display = 'none';
+  }
 
-  state.submissions.forEach((sub, index) => {
+  const allRevealed = state.submissions.length > 0 && state.submissions.every(sub => !sub.hidden);
+
+  state.submissions.forEach((sub, localIndex) => {
     const cluster = document.createElement('div');
     cluster.className = 'submission-cluster';
-    cluster.style.animationDelay = `${index * 0.12}s`;
+    cluster.style.animationDelay = `${localIndex * 0.12}s`;
 
     if (sub.hidden) {
       const card = document.createElement('div');
       card.className = 'submission-card hidden-card';
-      card.textContent = '?';
+      card.innerHTML = `<div style="display:flex; height:100%; align-items:center; justify-content:center; font-size: 2rem; opacity: 0.5;">?</div>`;
       cluster.appendChild(card);
+      
+      if (state.isCzar) {
+        cluster.classList.add('selectable');
+        cluster.addEventListener('click', () => {
+          vibrate(20);
+          socket.emit('revealSubmission', { index: sub.index });
+        });
+      }
     } else {
       sub.cards.forEach(cardText => {
         const card = document.createElement('div');
@@ -757,23 +780,41 @@ function renderSubmissions(state) {
         cluster.appendChild(card);
       });
 
-      if (state.isCzar) {
+      if (state.isCzar && allRevealed) {
         cluster.classList.add('selectable');
+        
+        if (selectedWinnerIndex === localIndex) {
+          cluster.classList.add('selected');
+        }
+
         cluster.addEventListener('click', () => {
           vibrate(20);
           document.querySelectorAll('.submission-cluster').forEach(c => c.classList.remove('selected'));
           cluster.classList.add('selected');
           
-          // Confirm selection after a brief moment
-          setTimeout(() => {
-            socket.emit('selectWinner', { submissionIndex: index });
-          }, 500);
+          selectedWinnerIndex = localIndex;
+          btnConfirmWinnerContainer.style.display = 'block';
         });
       }
     }
 
     submissionsGrid.appendChild(cluster);
   });
+  
+  // Re-create button to clear event listeners safely on re-renders
+  const oldBtn = document.getElementById('btn-confirm-winner');
+  if (oldBtn && state.isCzar && allRevealed) {
+    const newBtn = oldBtn.cloneNode(true);
+    oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+    newBtn.addEventListener('click', () => {
+      if (selectedWinnerIndex !== null) {
+        vibrate([20, 60]);
+        // Utilize the absolute index mapped by the server
+        socket.emit('selectWinner', { submissionIndex: state.submissions[selectedWinnerIndex].index });
+        selectedWinnerIndex = null;
+      }
+    });
+  }
 }
 
 // ---- Render Scoreboard ----

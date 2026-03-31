@@ -143,9 +143,11 @@ function getRoomState(room, playerId) {
     currentBlackCard: room.currentBlackCard,
     isCzar: isCzar,
     czarName: czar ? czar.name : '',
-    submissions: room.state === 'judging' || room.state === 'roundEnd'
-      ? room.submissions
-      : room.submissions.map(() => ({ card: '???', hidden: true })),
+    submissions: room.state === 'judging'
+      ? room.submissions.map((s, idx) => s.revealed ? { ...s, index: idx, hidden: false } : { index: idx, hidden: true, cards: s.cards.map(() => '???') })
+      : room.state === 'roundEnd'
+      ? room.submissions.map((s, idx) => ({ ...s, index: idx, hidden: false }))
+      : [],
     roundWinner: room.roundWinner,
     isHost: room.hostId === playerId,
     pointsToWin: room.pointsToWin,
@@ -306,7 +308,8 @@ io.on('connection', (socket) => {
     room.submissions.push({
       playerId: player.id,
       playerName: player.name,
-      cards: selectedCards
+      cards: selectedCards,
+      revealed: false
     });
 
     broadcastState(room);
@@ -322,6 +325,20 @@ io.on('connection', (socket) => {
       room.state = 'judging';
       // Shuffle submissions so czar can't guess who submitted what
       room.submissions = shuffleArray(room.submissions);
+      broadcastState(room);
+    }
+  });
+
+  socket.on('revealSubmission', ({ index }) => {
+    if (!currentRoom) return;
+    const room = rooms.get(currentRoom);
+    if (!room || room.state !== 'judging') return;
+
+    const czar = getCzar(room);
+    if (!czar || czar.id !== playerId) return;
+
+    if (index >= 0 && index < room.submissions.length) {
+      room.submissions[index].revealed = true;
       broadcastState(room);
     }
   });
