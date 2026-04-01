@@ -91,7 +91,7 @@ const blackCards = [
   "Aprendi da pior maneira que não pode ajudar um amigo triste com ________.",
   "No futuro, historiadores vão concordar que _______ marcou o começo do declínio do Brasil.",
   "O exército brasileiro interroga agora os agentes inimigos submetendo-os sucessivamente a ________.",
-  "O segredo para um casamento bem sucedido é comunicação, comunicação, e __________.",
+  "O segredo para um casamento bem sucedido é comunicação, e __________.",
   "Quando tudo falha, posso sempre me masturbar vendo _______.",
   "Genialidade é 10% inspiração e 90% _______.",
   "Todos de pé! Braços pra cima! Vamos cantar! _________",
