@@ -397,13 +397,18 @@ socket.on('gameState', (state) => {
   renderState(state, prevState);
 });
 
-socket.on('luckyResult', ({ blackCard, whiteCard }) => {
-  let blackText = blackCard;
+socket.on('luckyResult', ({ blackCard, whiteCards }) => {
+  let blackText = blackCard.text;
   if (blackText.includes('_')) {
     blackText = blackText.replace(/_+/g, `<span class="blank"></span>`);
   }
   luckyBlackText.innerHTML = blackText;
-  luckyWhiteText.textContent = whiteCard;
+  
+  // Support multiple white cards rendering nicely
+  luckyWhiteText.innerHTML = whiteCards
+    .map(cardStr => `<div style="background:var(--white-card-bg); color:var(--white-card-text); padding:10px; border-radius:6px; margin-bottom: 8px; font-weight: 600;">${cardStr}</div>`)
+    .join('');
+    
   luckyModal.classList.remove('hidden');
 });
 
