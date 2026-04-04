@@ -590,16 +590,11 @@ io.on('connection', (socket) => {
     let poolBlack = [...blackCards];
     let poolWhite = [...whiteCards];
     
-    if (currentRoom) {
-      const room = rooms.get(currentRoom);
-      if (room && room.activeExpansions && room.activeExpansions.length > 0) {
-        room.activeExpansions.forEach(packId => {
-          if (expansions && expansions[packId]) {
-            poolBlack.push(...expansions[packId].blackCards);
-            poolWhite.push(...expansions[packId].whiteCards);
-          }
-        });
-      }
+    if (expansions) {
+      Object.values(expansions).forEach(pack => {
+        if (pack.blackCards) poolBlack.push(...pack.blackCards);
+        if (pack.whiteCards) poolWhite.push(...pack.whiteCards);
+      });
     }
 
     if (poolBlack.length === 0 || poolWhite.length === 0) return;
