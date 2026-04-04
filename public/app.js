@@ -43,6 +43,7 @@ const gameStatus = document.getElementById('game-status');
 const submissionsArea = document.getElementById('submissions-area');
 const submissionsGrid = document.getElementById('submissions-grid');
 const btnConfirmWinnerContainer = document.getElementById('btn-confirm-winner-container');
+const expansionsList = document.getElementById('expansions-list');
 const handArea = document.getElementById('hand-area');
 const handCards = document.getElementById('hand-cards');
 const handScrollHint = document.getElementById('hand-scroll-hint');
@@ -467,6 +468,41 @@ function renderLobby(state) {
 
     playerList.appendChild(li);
   });
+
+  // Render Expansions
+  const expansionsPanel = document.querySelector('.expansions-panel');
+  if (state.availableExpansions && Object.keys(state.availableExpansions).length > 0) {
+    expansionsPanel.style.display = 'block';
+    expansionsList.innerHTML = '';
+    
+    Object.values(state.availableExpansions).forEach(pack => {
+      const li = document.createElement('li');
+      li.className = 'expansion-item';
+      
+      const details = document.createElement('div');
+      details.className = 'expansion-details';
+      details.innerHTML = `<strong>${pack.name}</strong><small>${pack.blackCards.length + pack.whiteCards.length} cartas</small>`;
+      
+      const toggle = document.createElement('input');
+      toggle.type = 'checkbox';
+      toggle.className = 'expansion-toggle';
+      toggle.checked = state.activeExpansions && state.activeExpansions.includes(pack.id);
+      toggle.disabled = !state.isHost;
+      
+      if (state.isHost) {
+        toggle.addEventListener('change', (e) => {
+           vibrate(10);
+           socket.emit('toggleExpansion', { packId: pack.id, enabled: e.target.checked });
+        });
+      }
+      
+      li.appendChild(details);
+      li.appendChild(toggle);
+      expansionsList.appendChild(li);
+    });
+  } else {
+    if (expansionsPanel) expansionsPanel.style.display = 'none';
+  }
 
   if (state.isHost) {
     btnStartGame.style.display = '';

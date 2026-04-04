@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const { v4: uuidv4 } = require('uuid');
-const { blackCards, whiteCards } = require('./cards');
+const { blackCards, whiteCards, expansions } = require('./cards');
 
 const app = express();
 const server = http.createServer(app);
@@ -40,6 +40,9 @@ function createRoom(hostId, hostName) {
       connected: true
     }],
     state: 'lobby', // lobby, playing, judging, roundEnd, gameOver
+    activeExpansions: [],
+    customBlackCards: [...blackCards],
+    customWhiteCards: [...whiteCards],
     blackDeck: [],
     whiteDeck: [],
     currentBlackCard: null,
@@ -56,15 +59,28 @@ function createRoom(hostId, hostName) {
 }
 
 function initDecks(room) {
-  room.blackDeck = shuffleArray(blackCards);
-  room.whiteDeck = shuffleArray(whiteCards);
+  let finalBlack = [...blackCards];
+  let finalWhite = [...whiteCards];
+
+  room.activeExpansions.forEach(packId => {
+    if (expansions && expansions[packId]) {
+      finalBlack.push(...expansions[packId].blackCards);
+      finalWhite.push(...expansions[packId].whiteCards);
+    }
+  });
+
+  room.customBlackCards = finalBlack;
+  room.customWhiteCards = finalWhite;
+
+  room.blackDeck = shuffleArray(finalBlack);
+  room.whiteDeck = shuffleArray(finalWhite);
 }
 
 function dealCards(room, count = 7) {
   for (const player of room.players) {
     while (player.hand.length < count) {
       if (room.whiteDeck.length === 0) {
-        room.whiteDeck = shuffleArray(whiteCards);
+        room.whiteDeck = shuffleArray(room.customWhiteCards || whiteCards);
       }
       player.hand.push(room.whiteDeck.pop());
     }
@@ -84,7 +100,7 @@ function startRound(room) {
 
   // Draw black card
   if (room.blackDeck.length === 0) {
-    room.blackDeck = shuffleArray(blackCards);
+    room.blackDeck = shuffleArray(room.customBlackCards || blackCards);
   }
   const text = room.blackDeck.pop();
   const pickCount = Math.max(1, (text.match(/_+/g) || []).length);
@@ -152,7 +168,9 @@ function getRoomState(room, playerId) {
     isHost: room.hostId === playerId,
     pointsToWin: room.pointsToWin,
     roundNumber: room.roundNumber,
-    minPlayers: room.minPlayers
+    minPlayers: room.minPlayers,
+    availableExpansions: expansions,
+    activeExpansions: room.activeExpansions
   };
 }
 
@@ -256,6 +274,19 @@ io.on('connection', (socket) => {
     initDecks(room);
     room.czarIndex = 0;
     startRound(room);
+    broadcastState(room);
+  });
+
+  socket.on('toggleExpansion', ({ packId, enabled }) => {
+    if (!currentRoom) return;
+    const room = rooms.get(currentRoom);
+    if (!room || room.hostId !== playerId || room.state !== 'lobby') return;
+    
+    if (enabled && !room.activeExpansions.includes(packId)) {
+      room.activeExpansions.push(packId);
+    } else if (!enabled) {
+      room.activeExpansions = room.activeExpansions.filter(id => id !== packId);
+    }
     broadcastState(room);
   });
 

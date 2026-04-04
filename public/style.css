@@ -425,6 +425,94 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.expansions-panel {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border);
+}
+
+.expansions-panel h2 {
+  font-size: 1.1rem;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.expansions-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.expansion-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: rgba(255,255,255,0.02);
+  border-radius: var(--radius);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.expansion-details strong {
+  display: block;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.expansion-details small {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.expansion-toggle {
+  appearance: none;
+  width: 48px;
+  height: 24px;
+  background: var(--surface-light);
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.expansion-toggle:checked {
+  background: var(--accent-green);
+}
+
+.expansion-toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.expansion-toggle:checked::after {
+  transform: translateX(24px);
+}
+
+.expansion-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .lobby-players h2 {
   font-size: 0.95rem;
   font-weight: 700;
