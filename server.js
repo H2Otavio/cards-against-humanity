@@ -587,13 +587,28 @@ io.on('connection', (socket) => {
   });
 
   socket.on('luckyDraw', () => {
-    if (!blackCards || !whiteCards || blackCards.length === 0 || whiteCards.length === 0) return;
-    const randomBlackStr = blackCards[Math.floor(Math.random() * blackCards.length)];
+    let poolBlack = [...blackCards];
+    let poolWhite = [...whiteCards];
+    
+    if (currentRoom) {
+      const room = rooms.get(currentRoom);
+      if (room && room.activeExpansions && room.activeExpansions.length > 0) {
+        room.activeExpansions.forEach(packId => {
+          if (expansions && expansions[packId]) {
+            poolBlack.push(...expansions[packId].blackCards);
+            poolWhite.push(...expansions[packId].whiteCards);
+          }
+        });
+      }
+    }
+
+    if (poolBlack.length === 0 || poolWhite.length === 0) return;
+    const randomBlackStr = poolBlack[Math.floor(Math.random() * poolBlack.length)];
     const pickCount = Math.max(1, (randomBlackStr.match(/_+/g) || []).length);
     
     const chosenWhites = [];
     for(let i = 0; i < pickCount; i++) {
-        chosenWhites.push(whiteCards[Math.floor(Math.random() * whiteCards.length)]);
+        chosenWhites.push(poolWhite[Math.floor(Math.random() * poolWhite.length)]);
     }
 
     socket.emit('luckyResult', { 

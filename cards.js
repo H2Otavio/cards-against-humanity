@@ -1890,7 +1890,8 @@ const whiteCards = [
   "Agredir um vizinho no supermercado para pegar a última bandeja de carne",
   "Ser cancelado na internet por ter xingado um cachorro caramelo",
   "Descobrir meses depois que a sua amante online era, na verdade, sua tia",
-  "Um Celta rebaixado com caixa de som tocando funk em frente à porta do hospital"
+  "Um Celta rebaixado com caixa de som tocando funk em frente à porta do hospital",
+  "Cigarro de café da manhã"
 ];
 
 const expansions = {
