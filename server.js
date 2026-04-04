@@ -37,7 +37,9 @@ function createRoom(hostId, hostName) {
       score: 0,
       hand: [],
       submittedCards: [],
-      connected: true
+      connected: true,
+      roundsNotWon: 0,
+      swapsAvailable: 0
     }],
     state: 'lobby', // lobby, playing, judging, roundEnd, gameOver
     activeExpansions: [],
@@ -106,8 +108,8 @@ function startRound(room) {
   const pickCount = Math.max(1, (text.match(/_+/g) || []).length);
   room.currentBlackCard = { text: text, pick: pickCount };
 
-  // Deal up to 10 cards per player (to support multiple submissions comfortably)
-  dealCards(room, 10);
+  // Deal up to 7 cards per player
+  dealCards(room, 7);
 }
 
 function getActivePlayers(room) {
@@ -147,6 +149,8 @@ function getRoomState(room, playerId) {
   return {
     code: room.code,
     state: room.state,
+    swapsAvailable: player ? player.swapsAvailable : 0,
+    roundsNotWon: player ? player.roundsNotWon : 0,
     players: room.players.map(p => ({
       id: p.id,
       name: p.name,
@@ -244,7 +248,9 @@ io.on('connection', (socket) => {
       score: 0,
       hand: [],
       submittedCards: [],
-      connected: true
+      connected: true,
+      roundsNotWon: 0,
+      swapsAvailable: 0
     });
 
     currentRoom = code;
@@ -393,6 +399,20 @@ io.on('connection', (socket) => {
       winnerPlayer.score++;
     }
 
+    // Award swaps to losers
+    room.players.forEach(p => {
+      if (winnerPlayer && p.id === winnerPlayer.id) {
+        p.roundsNotWon = 0;
+      } else if (p.id !== czar.id) {
+        // Did not win, and wasn't czar
+        p.roundsNotWon = (p.roundsNotWon || 0) + 1;
+        if (p.roundsNotWon >= 2) {
+          p.swapsAvailable = Math.min((p.swapsAvailable || 0) + 1, 2);
+          p.roundsNotWon = 0;
+        }
+      }
+    });
+
     room.roundWinner = {
       playerName: winner.playerName,
       cards: winner.cards,
@@ -420,6 +440,30 @@ io.on('connection', (socket) => {
     broadcastState(room);
   });
 
+  socket.on('swapCard', ({ cardIndex }) => {
+    if (!currentRoom) return;
+    const room = rooms.get(currentRoom);
+    if (!room || room.state !== 'playing') return;
+
+    const player = room.players.find(p => p.id === playerId);
+    if (!player || !player.swapsAvailable || player.swapsAvailable <= 0) return;
+
+    const czar = getCzar(room);
+    if (czar && czar.id === player.id) return;
+
+    if (cardIndex < 0 || cardIndex >= player.hand.length) return;
+
+    player.swapsAvailable--;
+    player.hand.splice(cardIndex, 1);
+
+    if (room.whiteDeck.length === 0) {
+      room.whiteDeck = shuffleArray(room.customWhiteCards || whiteCards);
+    }
+    player.hand.push(room.whiteDeck.pop());
+
+    io.to(player.id).emit('gameState', getRoomState(room, player.id));
+  });
+
   socket.on('playAgain', () => {
     if (!currentRoom) return;
     const room = rooms.get(currentRoom);
@@ -431,6 +475,8 @@ io.on('connection', (socket) => {
       player.score = 0;
       player.hand = [];
       player.submittedCards = [];
+      player.roundsNotWon = 0;
+      player.swapsAvailable = 0;
     }
     room.roundNumber = 0;
     room.czarIndex = 0;

@@ -1503,3 +1503,32 @@ body {
     padding-bottom: 20px;
   }
 }
+
+.card-swap-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: var(--accent-pink);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  font-size: 1.2rem;
+  z-index: 10;
+  transition: transform 0.2s;
+}
+
+.card-swap-btn:hover {
+  transform: scale(1.15);
+  background: #ff5eaa;
+}
+
+.card-swap-btn:active {
+  transform: scale(0.9);
+}

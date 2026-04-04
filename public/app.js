@@ -31,6 +31,7 @@ const btnLeaveRoomLobby = document.getElementById('btn-leave-room-lobby');
 // Game
 const gameRound = document.getElementById('game-round');
 const gameGoal = document.getElementById('game-goal');
+const gameSwaps = document.getElementById('game-swaps');
 const btnScoreboardToggle = document.getElementById('btn-scoreboard-toggle');
 const btnLeaveRoomGame = document.getElementById('btn-leave-room-game');
 const scoreboardPanel = document.getElementById('scoreboard-panel');
@@ -529,6 +530,13 @@ function renderGame(state, prevState) {
   gameRound.textContent = `Rodada ${state.roundNumber}`;
   gameGoal.textContent = `Meta: ${state.pointsToWin} pts`;
 
+  if (state.swapsAvailable > 0) {
+    gameSwaps.style.display = '';
+    gameSwaps.textContent = `🔄 Trocas: ${state.swapsAvailable}`;
+  } else {
+    gameSwaps.style.display = 'none';
+  }
+
   // Scoreboard
   renderScoreboard(state);
 
@@ -694,6 +702,19 @@ function renderHand(state) {
     footer.className = 'card-footer';
     footer.textContent = 'Cards Against Humanity';
     cardEl.appendChild(footer);
+
+    if (state.swapsAvailable > 0 && !state.isCzar) {
+      const swapBtn = document.createElement('button');
+      swapBtn.className = 'card-swap-btn';
+      swapBtn.title = 'Descartar e puxar outra (Gasta 1 Troca)';
+      swapBtn.innerHTML = '⟳';
+      swapBtn.addEventListener('click', (e) => {
+         e.stopPropagation();
+         vibrate(15);
+         socket.emit('swapCard', { cardIndex: index });
+      });
+      cardEl.appendChild(swapBtn);
+    }
 
     cardEl.addEventListener('click', (e) => {
       e.stopPropagation();

@@ -1891,7 +1891,11 @@ const whiteCards = [
   "Ser cancelado na internet por ter xingado um cachorro caramelo",
   "Descobrir meses depois que a sua amante online era, na verdade, sua tia",
   "Um Celta rebaixado com caixa de som tocando funk em frente à porta do hospital",
-  "Cigarro de café da manhã"
+  "Cigarro de café da manhã",
+  "Banheirão",
+  "Dar banho no peixe",
+  "Levar a avó no jiu-jitsu",
+  "Beber até o cu fazer bico",
 ];
 
 const expansions = {
